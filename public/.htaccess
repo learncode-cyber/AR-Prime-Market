@@ -1,0 +1,15 @@
+# AR Prime Market — Hostinger / Apache SPA routing fallback
+# Place this file (or the dist copy) at the root of the deployed folder.
+# Every non-file/non-directory request is served index.html so the
+# TanStack Router app can hydrate the route on the client.
+
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+  RewriteBase /
+
+  RewriteRule ^index\.html$ - [L]
+
+  RewriteCond %{REQUEST_FILENAME} !-f
+  RewriteCond %{REQUEST_FILENAME} !-d
+  RewriteRule . /index.html [L]
+</IfModule>

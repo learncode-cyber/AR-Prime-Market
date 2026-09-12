@@ -1,0 +1,15 @@
+User-agent: *
+Allow: /
+Disallow: /kali_master
+Disallow: /kali_master/
+Disallow: /login
+Disallow: /signup
+Disallow: /reset-password
+Disallow: /account
+Disallow: /checkout
+Disallow: /cart
+Disallow: /order-confirmation
+Disallow: /payment.return
+Disallow: /api/
+
+Sitemap: https://arprimemarket.shop/sitemap.xml

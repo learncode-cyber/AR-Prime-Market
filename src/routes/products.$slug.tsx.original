@@ -1,0 +1,634 @@
+import { createFileRoute, Link } from "@tanstack/react-router";
+import { useEffect, useState } from "react";
+import {
+  ChevronLeft,
+  Minus,
+  Plus,
+  ShoppingCart,
+  Truck,
+  Shield,
+  RotateCcw,
+  Heart,
+  X,
+  ChevronLeft as ArrowLeft,
+  ChevronRight as ArrowRight,
+  Maximize2,
+} from "lucide-react";
+import { BundleOfferPicker } from "@/components/BundleOfferPicker";
+
+import { useProduct } from "@/hooks/useProductData";
+import { useLanguage } from "@/context/LanguageContext";
+import { useCurrency } from "@/context/CurrencyContext";
+import { useCart } from "@/context/CartContext";
+import { useWishlistStatus, useToggleWishlist } from "@/hooks/useWishlist";
+import { useAuth } from "@/context/AuthContext";
+import { useProductReviews, useSubmitReview } from "@/hooks/useProductReviews";
+import { StarRating } from "@/components/StarRating";
+import { toast } from "sonner";
+import { detectMediaKind, toEmbedUrl, videoThumbnail } from "@/lib/media";
+import { useRecentlyViewed } from "@/hooks/useRecentlyViewed";
+import { useProductVariants, type ProductVariant } from "@/hooks/useProductVariants";
+import { VariantSelector } from "@/components/VariantSelector";
+import RecentlyViewed from "@/components/RecentlyViewed";
+import { supabase } from "@/integrations/supabase/client";
+import { resolveStorageImageUrl, STORAGE_PRODUCT_FALLBACK_URL } from "@/lib/storageImage";
+import { fireMetaEvent, getActiveCurrency } from "@/lib/metaPixel";
+
+const SITE_URL = "https://arprimemarket.shop";
+const SITE_NAME = "AR Prime Market";
+
+export const Route = createFileRoute("/products/$slug")({
+  loader: async ({ params }) => {
+    const { data } = await supabase
+      .from("products")
+      .select("title, description, price, gallery_urls, slug")
+      .eq("slug", params.slug)
+      .eq("is_active", true)
+      .maybeSingle();
+    if (!data) return { product: null };
+    const image = resolveStorageImageUrl(
+      (data.gallery_urls as string[] | null)?.[0] ?? null,
+      STORAGE_PRODUCT_FALLBACK_URL,
+    );
+    return {
+      product: {
+        title: data.title as string,
+        description: (data.description as string) || "",
+        price: Number(data.price),
+        image,
+        slug: data.slug as string,
+      },
+    };
+  },
+  head: ({ params, loaderData }) => {
+    const p = loaderData?.product;
+    const url = `${SITE_URL}/products/${params.slug}`;
+    if (!p) {
+      const title = `Premium Product — Free Worldwide Shipping | ${SITE_NAME}`;
+      const desc = `Shop premium products with secure global payments. Fast tracked shipping to USA, Canada, UK, Europe & UAE. ${SITE_NAME}.`;
+      return {
+        meta: [
+          { title },
+          { name: "description", content: desc },
+          { property: "og:title", content: title },
+          { property: "og:description", content: desc },
+          { property: "og:url", content: url },
+          { property: "og:type", content: "product" },
+        ],
+        links: [{ rel: "canonical", href: url }],
+      };
+    }
+    const title = `${p.title} — Premium Quality | Free Worldwide Shipping`;
+    const excerpt = (p.description || "").replace(/\s+/g, " ").trim().slice(0, 110);
+    const desc = `${excerpt}${excerpt ? " — " : ""}Shop online with secure global payments. Fast tracked shipping to USA, Canada, UK, Europe & UAE. ${SITE_NAME}.`;
+    return {
+      meta: [
+        { title },
+        { name: "description", content: desc },
+        { property: "og:title", content: title },
+        { property: "og:description", content: desc },
+        { property: "og:url", content: url },
+        { property: "og:type", content: "product" },
+        ...(p.image ? [{ property: "og:image", content: p.image }] : []),
+      ],
+      links: [{ rel: "canonical", href: url }],
+      scripts: [
+        {
+          type: "application/ld+json",
+          children: JSON.stringify({
+            "@context": "https://schema.org",
+            "@type": "Product",
+            name: p.title,
+            description: excerpt,
+            sku: p.slug,
+            brand: { "@type": "Brand", name: SITE_NAME },
+            ...(p.image ? { image: p.image } : {}),
+            offers: {
+              "@type": "Offer",
+              priceCurrency: "USD",
+              price: p.price,
+              availability: "https://schema.org/InStock",
+              url,
+              seller: { "@type": "Organization", name: SITE_NAME },
+              shippingDetails: {
+                "@type": "OfferShippingDetails",
+                shippingRate: { "@type": "MonetaryAmount", value: 0, currency: "USD" },
+                shippingDestination: [
+                  { "@type": "DefinedRegion", addressCountry: "US" },
+                  { "@type": "DefinedRegion", addressCountry: "CA" },
+                  { "@type": "DefinedRegion", addressCountry: "GB" },
+                  { "@type": "DefinedRegion", addressCountry: "AE" },
+                  { "@type": "DefinedRegion", addressCountry: "AU" },
+                ],
+              },
+            },
+          }),
+        },
+      ],
+    };
+  },
+  component: ProductDetailPage,
+});
+
+function ProductDetailPage() {
+  const { slug } = Route.useParams();
+  const { t } = useLanguage();
+  const { formatPrice } = useCurrency();
+  const { addToCart } = useCart();
+  const { user } = useAuth();
+  const { data: product, isLoading } = useProduct(slug);
+  const isInWishlist = useWishlistStatus(product?.id || "");
+  const toggleWishlist = useToggleWishlist();
+  const [selectedImage, setSelectedImage] = useState(0);
+  const [lightboxOpen, setLightboxOpen] = useState(false);
+  const [qty, setQty] = useState(1);
+  const [selectedVariant, setSelectedVariant] = useState<ProductVariant | null>(null);
+  const { data: variants = [] } = useProductVariants(product?.id);
+  const { addProduct: trackView } = useRecentlyViewed();
+
+  // Track view in localStorage
+  useEffect(() => {
+    if (!product) return;
+    trackView({
+      id: product.id,
+      title: product.title,
+      slug: product.slug,
+      price: product.price,
+      currency: product.currency,
+      image_url: product.image || null,
+    });
+  }, [product?.id]);
+
+  // Meta Pixel ViewContent — fires once per product load with active currency + event_id
+  useEffect(() => {
+    if (!product) return;
+    fireMetaEvent("ViewContent", {
+      content_name: product.title,
+      content_ids: [product.id],
+      content_type: "product",
+      value: product.price,
+      currency: getActiveCurrency(),
+    });
+  }, [product?.id]);
+
+  // Auto-select first in-stock variant
+  useEffect(() => {
+    if (variants.length > 0 && !selectedVariant) {
+      const firstAvail = variants.find((v) => v.stock_quantity > 0) || variants[0];
+      setSelectedVariant(firstAvail);
+    }
+  }, [variants, selectedVariant]);
+
+  // Reviews
+  const { data: reviews = [] } = useProductReviews(product?.id || "");
+  const submitReview = useSubmitReview();
+  const [reviewRating, setReviewRating] = useState(5);
+  const [reviewText, setReviewText] = useState("");
+
+  const imageCount = product ? (product.images.length > 0 ? product.images.length : 1) : 0;
+  useEffect(() => {
+    if (imageCount < 2) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "ArrowLeft") setSelectedImage((i) => (i - 1 + imageCount) % imageCount);
+      else if (e.key === "ArrowRight") setSelectedImage((i) => (i + 1) % imageCount);
+      else if (e.key === "Escape") setLightboxOpen(false);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [imageCount]);
+
+  if (isLoading) {
+    return (
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8">
+        <div className="grid md:grid-cols-2 gap-8 animate-pulse">
+          <div className="aspect-square rounded-2xl bg-secondary/50" />
+          <div className="space-y-4">
+            <div className="h-8 bg-secondary/50 rounded w-3/4" />
+            <div className="h-6 bg-secondary/30 rounded w-1/3" />
+            <div className="h-24 bg-secondary/30 rounded" />
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (!product) {
+    return (
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-16 text-center">
+        <h2 className="font-display font-bold text-xl text-foreground">Product not found</h2>
+        <Link to="/products" className="mt-4 inline-block text-primary hover:underline text-sm">
+          {t("backToProducts")}
+        </Link>
+      </div>
+    );
+  }
+
+  const images = product.images.length > 0 ? product.images : [product.image];
+  const discount = product.compare_at_price
+    ? Math.round(((product.compare_at_price - product.price) / product.compare_at_price) * 100)
+    : 0;
+
+  const handleSubmitReview = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!user) {
+      toast.error("Please login to write a review");
+      return;
+    }
+    try {
+      await submitReview.mutateAsync({
+        product_id: product.id,
+        user_id: user.id,
+        rating: reviewRating,
+        review_text: reviewText,
+      });
+      toast.success("Review submitted! It will appear after approval.");
+      setReviewText("");
+      setReviewRating(5);
+    } catch {
+      toast.error("Failed to submit review");
+    }
+  };
+
+  return (
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
+      <Link
+        to="/products"
+        className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground mb-6 transition-colors"
+      >
+        <ChevronLeft className="w-4 h-4" /> {t("backToProducts")}
+      </Link>
+
+      <article
+        itemScope
+        itemType="https://schema.org/Product"
+        className="grid md:grid-cols-2 gap-6 lg:gap-10"
+      >
+        <meta itemProp="sku" content={product.slug} />
+        <meta itemProp="brand" content="AR Prime Market" />
+        {/* Images */}
+        <div className="space-y-3">
+          <div className="relative aspect-square rounded-2xl overflow-hidden bg-secondary/30 border border-border group">
+            {detectMediaKind(images[selectedImage]) !== "image" ? (
+              <iframe
+                src={toEmbedUrl(images[selectedImage])}
+                title={product.title}
+                className="w-full h-full"
+                loading="lazy"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                allowFullScreen
+              />
+            ) : (
+              <button
+                type="button"
+                onClick={() => setLightboxOpen(true)}
+                className="w-full h-full block cursor-zoom-in"
+                aria-label="Open fullscreen"
+              >
+                <img
+                  src={images[selectedImage]}
+                  alt={product.title}
+                  itemProp="image"
+                  className="w-full h-full object-cover"
+                />
+                <span className="absolute top-3 right-3 bg-black/50 text-white rounded-lg p-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <Maximize2 className="w-4 h-4" />
+                </span>
+              </button>
+            )}
+            {images.length > 1 && (
+              <>
+                <button
+                  type="button"
+                  onClick={() => setSelectedImage((i) => (i - 1 + images.length) % images.length)}
+                  className="absolute left-2 top-1/2 -translate-y-1/2 bg-background/80 hover:bg-background border border-border rounded-full p-2 shadow-sm"
+                  aria-label="Previous"
+                >
+                  <ArrowLeft className="w-4 h-4" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setSelectedImage((i) => (i + 1) % images.length)}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 bg-background/80 hover:bg-background border border-border rounded-full p-2 shadow-sm"
+                  aria-label="Next"
+                >
+                  <ArrowRight className="w-4 h-4" />
+                </button>
+              </>
+            )}
+          </div>
+          {images.length > 1 && (
+            <div className="flex gap-2 overflow-x-auto pb-1">
+              {images.map((img, i) => {
+                const kind = detectMediaKind(img);
+                const thumb = kind === "youtube" ? videoThumbnail(img) : null;
+                return (
+                  <button
+                    key={i}
+                    onClick={() => setSelectedImage(i)}
+                    className={`relative w-16 h-16 rounded-lg overflow-hidden border-2 shrink-0 transition-colors ${
+                      i === selectedImage
+                        ? "border-primary"
+                        : "border-border hover:border-primary/50"
+                    }`}
+                  >
+                    {kind !== "image" ? (
+                      <>
+                        {thumb ? (
+                          <img src={thumb} alt="" className="w-full h-full object-cover" />
+                        ) : (
+                          <div className="w-full h-full bg-secondary" />
+                        )}
+                        <span className="absolute inset-0 flex items-center justify-center bg-black/40 text-white text-xs">
+                          ▶
+                        </span>
+                      </>
+                    ) : (
+                      <img src={img} alt="" className="w-full h-full object-cover" />
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+          )}
+        </div>
+
+        {/* Details */}
+        <div className="space-y-5">
+          <div>
+            <p className="text-xs text-muted-foreground uppercase tracking-wider">
+              {product.category}
+            </p>
+            <h1
+              itemProp="name"
+              className="font-display font-bold text-xl sm:text-2xl text-foreground mt-1"
+            >
+              {product.title}
+            </h1>
+            <div className="mt-2">
+              <StarRating
+                rating={product.rating}
+                showCount
+                count={product.review_count}
+                size="md"
+              />
+            </div>
+          </div>
+
+          <div
+            itemProp="offers"
+            itemScope
+            itemType="https://schema.org/Offer"
+            className="space-y-1.5"
+          >
+            <meta itemProp="priceCurrency" content="USD" />
+            <meta itemProp="price" content={String(product.price)} />
+            <link
+              itemProp="availability"
+              href={
+                product.stock_quantity > 0
+                  ? "https://schema.org/InStock"
+                  : "https://schema.org/OutOfStock"
+              }
+            />
+            <link itemProp="url" href={`https://arprimemarket.shop/products/${product.slug}`} />
+            <div className="flex items-baseline gap-3">
+              <span className="font-display font-bold text-2xl text-foreground">
+                {formatPrice(product.price, product.currency)}
+              </span>
+              {product.compare_at_price && (
+                <>
+                  <span className="text-base text-muted-foreground line-through">
+                    {formatPrice(product.compare_at_price, product.currency)}
+                  </span>
+                  <span className="px-2 py-0.5 rounded-lg bg-destructive/10 text-destructive text-xs font-semibold">
+                    -{discount}%
+                  </span>
+                </>
+              )}
+            </div>
+
+            {product.stock_quantity > 0 ? (
+              <p className="text-xs text-green-600 font-medium">
+                ✓ In Stock ({product.stock_quantity} available)
+              </p>
+            ) : (
+              <p className="text-xs text-destructive font-medium">✕ Out of Stock</p>
+            )}
+          </div>
+
+          {product.description && (
+            <p itemProp="description" className="text-sm text-muted-foreground leading-relaxed">
+              {product.description}
+            </p>
+          )}
+
+          {/* Variant selector (Size / Color etc.) */}
+          {variants.length > 0 && (
+            <VariantSelector
+              variants={variants}
+              selectedVariant={selectedVariant}
+              onSelect={setSelectedVariant}
+              currency={product.currency}
+            />
+          )}
+
+          {/* Tiered Bundle Offer (Buy 1 / 2 / 3) */}
+          <BundleOfferPicker
+            unitPrice={product.price}
+            unitCompareAt={product.compare_at_price}
+            selectedQty={qty}
+            onSelect={setQty}
+            currency={product.currency}
+          />
+
+          {/* Add to Cart + Wishlist */}
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => {
+                for (let i = 0; i < qty; i++) addToCart(product);
+                toast.success(`${qty} × ${product.title} added to cart`);
+              }}
+              disabled={product.stock_quantity <= 0}
+              className="flex-1 flex items-center justify-center gap-2 py-3.5 rounded-xl bg-primary text-primary-foreground font-bold text-sm hover:brightness-110 transition-all active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed touch-manipulation shadow-sm"
+            >
+              <ShoppingCart className="w-4 h-4" />
+              {product.stock_quantity > 0 ? `Add ${qty} to Cart` : "Out of Stock"}
+            </button>
+            {user && (
+              <button
+                onClick={() => toggleWishlist.mutate(product.id)}
+                className={`p-3.5 rounded-xl border transition-colors touch-manipulation ${
+                  isInWishlist
+                    ? "border-destructive/30 bg-destructive/10 text-destructive"
+                    : "border-border hover:border-destructive/30 hover:bg-destructive/10 text-muted-foreground hover:text-destructive"
+                }`}
+              >
+                <Heart className={`w-5 h-5 ${isInWishlist ? "fill-current" : ""}`} />
+              </button>
+            )}
+          </div>
+
+          {/* Cash on Delivery + Returns assurance */}
+          <div className="flex items-start gap-3 p-3 rounded-xl bg-primary/5 border border-primary/20">
+            <div className="w-7 h-7 rounded-full bg-primary text-primary-foreground flex items-center justify-center flex-shrink-0">
+              <Shield className="w-4 h-4" />
+            </div>
+            <p className="text-sm font-semibold text-foreground leading-snug">
+              Secure Checkout & Easy 30-Day Returns
+            </p>
+          </div>
+
+          {/* Trust badges */}
+          <div className="grid grid-cols-3 gap-3 pt-4 border-t border-border">
+            {[
+              { icon: Truck, label: t("freeShipping") },
+              { icon: Shield, label: t("secureCheckout") },
+              { icon: RotateCcw, label: t("easyReturns") },
+            ].map((b) => (
+              <div key={b.label} className="flex flex-col items-center gap-1.5 text-center">
+                <div className="w-9 h-9 rounded-xl bg-primary/10 flex items-center justify-center">
+                  <b.icon className="w-4 h-4 text-primary" />
+                </div>
+                <span className="text-[10px] text-muted-foreground font-medium">{b.label}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+        {(product.review_count ?? 0) > 0 && (
+          <div
+            itemProp="aggregateRating"
+            itemScope
+            itemType="https://schema.org/AggregateRating"
+            className="sr-only"
+          >
+            <meta itemProp="ratingValue" content={String(product.rating ?? 0)} />
+            <meta itemProp="reviewCount" content={String(product.review_count ?? 0)} />
+          </div>
+        )}
+      </article>
+
+      {/* Reviews Section */}
+      <div className="mt-12 border-t border-border pt-8">
+        <h2 className="font-display font-bold text-lg text-foreground mb-6">
+          Customer Reviews ({reviews.length})
+        </h2>
+
+        {/* Write Review */}
+        {user ? (
+          <form
+            onSubmit={handleSubmitReview}
+            className="rounded-2xl border border-border bg-card p-5 mb-6"
+          >
+            <h3 className="font-display font-semibold text-sm text-foreground mb-3">
+              Write a Review
+            </h3>
+            <div className="mb-3">
+              <StarRating rating={reviewRating} interactive onChange={setReviewRating} size="lg" />
+            </div>
+            <textarea
+              value={reviewText}
+              onChange={(e) => setReviewText(e.target.value)}
+              placeholder="Share your experience with this product..."
+              className="w-full px-4 py-3 rounded-xl border border-border bg-background text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 resize-none"
+              rows={3}
+              required
+            />
+            <button
+              type="submit"
+              disabled={submitReview.isPending}
+              className="mt-3 px-6 py-2.5 rounded-xl bg-primary text-primary-foreground text-sm font-semibold hover:brightness-110 transition-all active:scale-[0.98] disabled:opacity-50"
+            >
+              {submitReview.isPending ? "Submitting..." : "Submit Review"}
+            </button>
+          </form>
+        ) : (
+          <div className="rounded-2xl border border-border bg-card/50 p-5 mb-6 text-center">
+            <p className="text-sm text-muted-foreground">
+              <Link to="/login" className="text-primary hover:underline">
+                Log in
+              </Link>{" "}
+              to write a review
+            </p>
+          </div>
+        )}
+
+        {/* Reviews List */}
+        {reviews.length === 0 ? (
+          <p className="text-sm text-muted-foreground">
+            No reviews yet. Be the first to review this product!
+          </p>
+        ) : (
+          <div className="space-y-4">
+            {reviews.map((review) => (
+              <div key={review.id} className="rounded-xl border border-border bg-card p-4">
+                <div className="flex items-center justify-between mb-2">
+                  <StarRating rating={review.rating} size="sm" />
+                  <span className="text-[10px] text-muted-foreground">
+                    {new Date(review.created_at).toLocaleDateString()}
+                  </span>
+                </div>
+                {review.review_text && (
+                  <p className="text-sm text-muted-foreground">{review.review_text}</p>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {lightboxOpen && detectMediaKind(images[selectedImage]) === "image" && (
+        <div
+          className="fixed inset-0 z-50 bg-black/90 flex items-center justify-center p-4"
+          onClick={() => setLightboxOpen(false)}
+        >
+          <button
+            type="button"
+            onClick={() => setLightboxOpen(false)}
+            className="absolute top-4 right-4 text-white/80 hover:text-white bg-white/10 rounded-full p-2"
+            aria-label="Close"
+          >
+            <X className="w-5 h-5" />
+          </button>
+          {images.length > 1 && (
+            <>
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setSelectedImage((i) => (i - 1 + images.length) % images.length);
+                }}
+                className="absolute left-4 top-1/2 -translate-y-1/2 text-white/80 hover:text-white bg-white/10 rounded-full p-3"
+                aria-label="Previous"
+              >
+                <ArrowLeft className="w-5 h-5" />
+              </button>
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setSelectedImage((i) => (i + 1) % images.length);
+                }}
+                className="absolute right-4 top-1/2 -translate-y-1/2 text-white/80 hover:text-white bg-white/10 rounded-full p-3"
+                aria-label="Next"
+              >
+                <ArrowRight className="w-5 h-5" />
+              </button>
+            </>
+          )}
+          <img
+            src={images[selectedImage]}
+            alt={product.title}
+            className="max-w-full max-h-full object-contain"
+            onClick={(e) => e.stopPropagation()}
+          />
+          <div className="absolute bottom-4 left-1/2 -translate-x-1/2 text-white/70 text-xs">
+            {selectedImage + 1} / {images.length}
+          </div>
+        </div>
+      )}
+
+      {/* Recently Viewed */}
+      <RecentlyViewed />
+    </div>
+  );
+}

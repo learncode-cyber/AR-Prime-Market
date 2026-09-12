@@ -1,0 +1,65 @@
+name: Deploy to Hostinger
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    
+    steps:
+      # ✅ Step 1: Checkout code
+      - name: Checkout code
+        uses: actions/checkout@v3
+      
+      # ✅ Step 2: Setup Node.js
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+          cache: 'npm'
+      
+      # ✅ Step 3: Install dependencies
+      - name: Install dependencies
+        run: npm ci
+      
+      # ✅ Step 4: Run migrations
+      - name: Run database migrations
+        run: npx supabase migration up
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+      
+      # ✅ Step 5: Build project
+      - name: Build project
+        run: npm run build
+        env:
+          VITE_SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          VITE_SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+      
+      # ✅ Step 6: Deploy to Hostinger via SSH
+      - name: Deploy to Hostinger
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.HOSTINGER_HOST }}
+          username: ${{ secrets.HOSTINGER_USER }}
+          key: ${{ secrets.HOSTINGER_SSH_KEY }}
+          script: |
+            cd ${{ secrets.HOSTINGER_APP_PATH }}
+            git pull origin main
+            npm ci
+            npm run build
+            pm2 restart ar-prime-market || pm2 start "node dist/server.js" --name ar-prime-market
+      
+      # ✅ Step 7: Notify on success
+      - name: Notify deployment success
+        if: success()
+        run: echo "✅ Deployment to Hostinger successful!"
+      
+      # ✅ Step 8: Notify on failure
+      - name: Notify deployment failure
+        if: failure()
+        run: echo "❌ Deployment failed! Check logs above."

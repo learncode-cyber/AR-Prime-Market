@@ -1,0 +1,2 @@
+DELETE FROM public.agent_research_logs WHERE category IN ('growth_hacking','executive_hr','web_development','digital_marketing');
+DELETE FROM public.ai_learning_logs WHERE category NOT IN ('ad_performance','creative_winners','support_patterns','product_insights','scaling');

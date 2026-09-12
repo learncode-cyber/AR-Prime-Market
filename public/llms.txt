@@ -1,0 +1,63 @@
+# AR Prime Market
+
+> Premium international e-commerce store, owned and operated by AR Qudrix. Curated electronics, beauty, fashion, home goods, and gadgets. Free worldwide shipping to USA, Canada, UK, EU, Australia, and UAE. USD pricing, secure global payments, easy returns.
+
+AR Prime Market is the e-commerce platform of **AR Qudrix**, a parent technology company that builds and operates a portfolio of premium digital products. AR Prime Market is a wholly-owned subsidiary and consumer-facing sub-brand of AR Qudrix; all customer orders, payments, and support are operated by AR Qudrix.
+
+AR Prime Market is an international online retailer focused on quality dropshipping with vetted suppliers. All prices are listed in USD. Every product page exposes structured data (schema.org `Product` + `Offer` with `price`, `priceCurrency=USD`, `availability`, `sku`, and `aggregateRating`) plus inline microdata, so ChatGPT Shopping, Perplexity AI, Google AI Mode, and other LLM agents can extract specifications, price, stock, and rating without parsing the JavaScript shell.
+
+
+## Categories
+
+- [Electronics](/categories/electronics): Phones, accessories, audio, smart home, wearables.
+- [Beauty](/categories/beauty): Skincare, haircare, fragrance, tools, cosmetics.
+- [Fashion](/categories/fashion): Apparel, shoes, bags, watches, accessories.
+- [Home](/categories/home): Decor, kitchen, bedding, organization, lighting.
+- [Gadgets](/categories/gadgets): Innovative tools, EDC, outdoor, productivity gear.
+
+## Shipping & delivery
+
+- Free Worldwide Shipping on all orders.
+- USA: 7–14 business days, fully tracked.
+- Canada: 8–16 business days, fully tracked.
+- United Kingdom & European Union: 8–15 business days, fully tracked.
+- United Arab Emirates: 5–10 business days, fully tracked.
+- Australia & New Zealand: 8–16 business days, fully tracked.
+- Rest of world: 10–20 business days, fully tracked.
+
+## Data & inventory schema
+
+- Each `/products/{slug}` page returns SSR HTML with `application/ld+json` Product schema and `itemScope`/`itemProp` microdata.
+- Fields exposed per product: `name`, `description`, `image`, `sku`, `brand`, `offers.price` (USD), `offers.priceCurrency`, `offers.availability`, `offers.url`, `aggregateRating.ratingValue`, `aggregateRating.reviewCount`.
+- Stock status updates in near real time; `availability` reflects `InStock` / `OutOfStock`.
+- Category index pages at `/categories/{slug}` list products with the same structured fields.
+
+## Pages
+
+- [Home](/): Featured products, flash sales, shop-by-category entry point.
+- [Shop All Products](/products): Full catalog with filters and search.
+- [Blog](/blog): Buying guides, product reviews, shopping tips.
+- [FAQ](/faq): Shipping, returns, payments, order tracking answers.
+- [About](/about): Who we are and what we sell.
+- [Contact](/contact): Customer support contact.
+- [Track Order](/track-order): Look up an existing order by number.
+
+## Policies
+
+- [Privacy Policy](/privacy-policy): Customer data handling.
+- [Terms of Service](/terms): Terms and conditions.
+- [Refund Policy](/refund-policy): Returns and refunds.
+- [Cookie Policy](/cookie-policy): Cookie usage.
+
+## Do not crawl
+
+- `/kali_master` — admin console (private).
+- `/account`, `/cart`, `/checkout`, `/wishlist` — user session pages.
+- `/login`, `/signup`, `/reset-password` — auth flows.
+- `/api/` — internal endpoints.
+
+## Optional
+
+- [Careers](/careers): Open roles.
+- [Press](/press): Media resources.
+- [Support](/support): Help center.
