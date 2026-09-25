@@ -1,0 +1,89 @@
+project_id = "vwnxnpgujxtomkxdxuvg"
+
+[functions.send-email]
+verify_jwt = false
+
+[functions.cart-recovery]
+verify_jwt = false
+
+[functions.translate-content]
+verify_jwt = false
+
+[functions.supplier-sync]
+verify_jwt = true
+
+[functions.webhook-dispatcher]
+verify_jwt = false
+
+[functions.bkash-pay]
+verify_jwt = false
+
+
+[functions.binance-pay-gateway]
+verify_jwt = false
+
+[functions.test-credentials]
+verify_jwt = true
+
+[functions.import-product]
+verify_jwt = true
+
+[functions.process-order]
+verify_jwt = false
+
+[functions.cj-proxy]
+verify_jwt = true
+
+[functions.cj-webhook]
+verify_jwt = false
+
+[functions.get-user-geo]
+verify_jwt = false
+
+[functions.meta-capi]
+verify_jwt = false
+
+[functions.meta-insights]
+verify_jwt = false
+
+
+
+[functions.telegram-notify]
+verify_jwt = false
+
+[functions.telegram-webhook]
+verify_jwt = false
+
+
+[functions.ai-support-chat]
+verify_jwt = false
+
+[functions.daily-ceo-report]
+verify_jwt = false
+
+[functions.ads-mcp]
+verify_jwt = true
+
+[functions.ad-performance-monitor]
+verify_jwt = false
+
+[functions.ai-learning-engine]
+verify_jwt = false
+
+[functions.agent-research-loop]
+# Was missing from config.toml entirely (silently relying on the default).
+# Made explicit: this function self-enforces auth via CRON_SECRET
+# (verifyCronSecret), same pattern as its sibling cron functions above.
+verify_jwt = false
+
+[functions.chro-orchestrator]
+# SECURITY: verify_jwt = true (fixed 2026-07). This function has no internal
+# auth check of its own, and can create agents / route business-action
+# proposals — it must never be publicly callable. Its only caller
+# (telegram-webhook) already sends the service-role key as the Bearer
+# token, which is itself a valid signed JWT, so this is backward compatible.
+verify_jwt = true
+
+
+
+

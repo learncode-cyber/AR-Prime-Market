@@ -1,0 +1,121 @@
+{
+  "agents": {
+    "marketing": {
+      "name": "MARKETING_AGENT",
+      "enabled": true,
+      "functions": [
+        "optimizePriceStrategy",
+        "createPersonalizedCampaign",
+        "runABTest",
+        "createOptimalBundles"
+      ],
+      "intervals": {
+        "price_optimization": "hourly",
+        "campaign_creation": "daily",
+        "bundle_creation": "weekly"
+      }
+    },
+    "support": {
+      "name": "CUSTOMER_SUPPORT_AGENT",
+      "enabled": true,
+      "functions": [
+        "segmentCustomers",
+        "createPersonalizationProfile",
+        "handleSupportTicket",
+        "handleReturnRequest",
+        "trackLoyalty"
+      ],
+      "intervals": {
+        "segmentation": "daily",
+        "ticket_handling": "realtime",
+        "loyalty_tracking": "daily"
+      }
+    },
+    "learning": {
+      "name": "LEARNING_AGENT",
+      "enabled": true,
+      "functions": [
+        "trainModel",
+        "predictDemand",
+        "identifyTrends"
+      ],
+      "ml_model": "gradient_boosting",
+      "training_frequency": "weekly"
+    },
+    "inventory": {
+      "name": "INVENTORY_AGENT",
+      "enabled": true,
+      "functions": [
+        "optimizeStock",
+        "calculateReorderPoint",
+        "manageSupliers"
+      ],
+      "intervals": {
+        "stock_optimization": "daily",
+        "supplier_review": "weekly"
+      }
+    },
+    "financial": {
+      "name": "FINANCIAL_AGENT",
+      "enabled": true,
+      "functions": [
+        "trackRevenue",
+        "optimizePricing",
+        "generateFinancialReport"
+      ],
+      "intervals": {
+        "revenue_tracking": "hourly",
+        "pricing_optimization": "daily",
+        "financial_report": "weekly"
+      }
+    },
+    "order": {
+      "name": "ORDER_MANAGER_AGENT",
+      "enabled": true,
+      "functions": [
+        "processOrder",
+        "optimizeShipping",
+        "trackShipment"
+      ],
+      "intervals": {
+        "order_processing": "realtime",
+        "shipping_optimization": "daily"
+      }
+    },
+    "chro": {
+      "name": "CHRO_AGENT",
+      "enabled": true,
+      "functions": [
+        "manageTeam",
+        "processPayroll",
+        "generatePerformanceReport"
+      ],
+      "intervals": {
+        "team_management": "daily",
+        "payroll_processing": "monthly",
+        "performance_report": "weekly"
+      }
+    },
+    "orchestrator": {
+      "name": "ARQ_MASTER_ORCHESTRATOR",
+      "enabled": true,
+      "functions": [
+        "initializeAgents",
+        "coordinateTasks",
+        "requestCEOApproval",
+        "handleAgentDecision"
+      ],
+      "approval_threshold": "high"
+    }
+  },
+  "database": {
+    "provider": "supabase",
+    "tables_required": 12,
+    "migrations": ["001_create_agent_system.sql", "002_add_sales_psychology.sql"]
+  },
+  "notifications": {
+    "channels": ["telegram", "email", "sms"],
+    "telegram_enabled": true,
+    "email_provider": "resend"
+  }
+}

@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>You're offline — AR Prime Market</title>
+    <style>
+      body {
+        font-family:
+          system-ui,
+          -apple-system,
+          sans-serif;
+        background: #ffffff;
+        color: #1a1a1a;
+        display: flex;
+        min-height: 100vh;
+        align-items: center;
+        justify-content: center;
+        margin: 0;
+        padding: 1.5rem;
+      }
+      .card {
+        max-width: 28rem;
+        text-align: center;
+      }
+      h1 {
+        font-size: 1.75rem;
+        margin: 0 0 0.5rem;
+        color: #e91e63;
+      }
+      p {
+        color: #555;
+        line-height: 1.5;
+      }
+      button {
+        margin-top: 1.25rem;
+        background: #e91e63;
+        color: white;
+        border: 0;
+        padding: 0.75rem 1.5rem;
+        border-radius: 0.75rem;
+        font-weight: 600;
+        cursor: pointer;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="card">
+      <h1>আপনি অফলাইনে আছেন</h1>
+      <p>
+        ইন্টারনেট সংযোগ পাওয়া যাচ্ছে না। ক্যাশড পেজ ব্রাউজ করা যাবে। সংযোগ ফিরে এলে রিফ্রেশ করুন।
+      </p>
+      <button onclick="location.reload()">আবার চেষ্টা করুন</button>
+    </div>
+  </body>
+</html>

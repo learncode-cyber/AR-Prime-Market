@@ -1,0 +1,2 @@
+REVOKE SELECT (cogs, shipping_cost, supplier_url, source_url, source_product_id, source_provider) ON public.products FROM anon, authenticated;
+REVOKE SELECT (cogs) ON public.product_variants FROM anon, authenticated;

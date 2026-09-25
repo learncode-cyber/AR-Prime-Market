@@ -1,0 +1,2 @@
+ALTER TABLE public.products ADD COLUMN IF NOT EXISTS stock_status text NOT NULL DEFAULT 'in_stock';
+ALTER TABLE public.products ADD CONSTRAINT products_stock_status_check CHECK (stock_status IN ('in_stock','out_of_stock','on_backorder'));

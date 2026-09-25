@@ -1,0 +1,1 @@
+INSERT INTO public.coupons (code, discount_type, discount_value, is_active) VALUES ('AR', 'percentage', 15, true);
